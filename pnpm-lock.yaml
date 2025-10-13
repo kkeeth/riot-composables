@@ -1,0 +1,62 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.7.2
+        version: 24.7.2
+      riot:
+        specifier: ^10.0.1
+        version: 10.0.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+packages:
+
+  '@riotjs/dom-bindings@10.0.3':
+    resolution: {integrity: sha512-7Y+1JOltbDEPhNACyzNatFkcGC0okNxmeZYxjdZsjmG3MyqID2bILmbL+SbO+JsGFhQXRei8XXPW9G6t70eJqA==}
+
+  '@riotjs/util@10.0.0':
+    resolution: {integrity: sha512-m+whXlT693F+8JVITflMLoKp4VxqTaFCBHWom5FULzFAA7VE2ipvQN5u6T//2OT3RyHGp7tQRlDKrVXwEyV7Jg==}
+
+  '@types/node@24.7.2':
+    resolution: {integrity: sha512-/NbVmcGTP+lj5oa4yiYxxeBjRivKQ5Ns1eSZeB99ExsEQ6rX5XYU1Zy/gGxY/ilqtD4Etx9mKyrPxZRetiahhA==}
+
+  riot@10.0.1:
+    resolution: {integrity: sha512-+MQB4O7kBycfGZa6TaF/AXi5WmsbEvx1XszGtt1wlUKXN7YFsMf5B7cjXTqI1r6jXB6pFAUuDQQAovChxXutcw==}
+    engines: {node: '>=18.0.0'}
+
+  typescript@5.9.3:
+    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+  undici-types@7.14.0:
+    resolution: {integrity: sha512-QQiYxHuyZ9gQUIrmPo3IA+hUl4KYk8uSA7cHrcKd/l3p1OTpZcM0Tbp9x7FAtXdAYhlasd60ncPpgu6ihG6TOA==}
+
+snapshots:
+
+  '@riotjs/dom-bindings@10.0.3':
+    dependencies:
+      '@riotjs/util': 10.0.0
+
+  '@riotjs/util@10.0.0': {}
+
+  '@types/node@24.7.2':
+    dependencies:
+      undici-types: 7.14.0
+
+  riot@10.0.1:
+    dependencies:
+      '@riotjs/dom-bindings': 10.0.3
+
+  typescript@5.9.3: {}
+
+  undici-types@7.14.0: {}
