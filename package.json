@@ -2,20 +2,35 @@
   "name": "riot-composables",
   "version": "0.0.1",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
+    "riot",
     "riotjs",
-    "composable"
+    "composables",
+    "hooks",
+    "reactive",
+    "composition-api"
   ],
   "author": "kkeeth",
   "license": "MIT",
   "packageManager": "pnpm@10.16.0",
   "devDependencies": {
-    "@types/node": "^24.7.2",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/node": "^20.11.0",
     "riot": "^10.0.1",
-    "typescript": "^5.9.3"
+    "rollup": "^4.9.6",
+    "rollup-plugin-dts": "^6.2.3",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
   }
 }
