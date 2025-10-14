@@ -1,0 +1,42 @@
+# Source files (npmにはビルド済みのdistのみを含める)
+src/
+tests/
+examples/
+
+# Config files
+.github/
+.vscode/
+.idea/
+*.config.ts
+*.config.js
+tsconfig.json
+tsconfig.build.json
+vitest.config.ts
+rollup.config.js
+
+# Development files
+.eslintrc*
+.prettierrc*
+.editorconfig
+.gitignore
+.gitattributes
+
+# Documentation (README.mdは含める)
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+
+# Testing
+coverage/
+.nyc_output/
+
+# CI/CD
+.travis.yml
+.circleci/
+.github/
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db
+node_modules/
+.env*
