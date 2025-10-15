@@ -9,6 +9,7 @@ import type {
   ComposablesPlugin,
   ComposablesContext,
   EnhancedComponent,
+  WatchCallback,
 } from '../types';
 import { createReactive } from './reactive';
 import { createEffect } from './effect';
@@ -68,7 +69,10 @@ const composablesPlugin: ComposablesPlugin = function (
   };
 
   // Add $watch helper
-  enhancedComponent.$watch = function <T>(getter: () => T, callback) {
+  enhancedComponent.$watch = function <T>(
+    getter: () => T,
+    callback: WatchCallback<T>,
+  ) {
     createWatch(this, getter, callback);
   };
 

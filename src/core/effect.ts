@@ -63,20 +63,14 @@ export function createEffect(
   // Store effect data
   component.__composables__.effects.set(effectId, effectData);
 
-  // Run effect immediately on mount
-  if (component.isMounted === false || component.isMounted === undefined) {
-    // Schedule to run on next tick (after mount)
-    const originalOnMounted = component.onMounted;
-    component.onMounted = function (props, state) {
-      runEffect();
-      if (originalOnMounted) {
-        return originalOnMounted.call(this, props, state);
-      }
-    };
-  } else {
-    // Component already mounted, run immediately
+  // Schedule effect to run on mount
+  const originalOnMounted = component.onMounted;
+  component.onMounted = function (props, state) {
     runEffect();
-  }
+    if (originalOnMounted) {
+      return originalOnMounted.call(this, props, state);
+    }
+  };
 
   // If deps provided, watch for changes
   if (deps) {
@@ -107,14 +101,4 @@ export function createEffect(
       effectData.cleanup();
     }
   });
-}
-
-/**
- * Helper to check if two dependency arrays are equal
- */
-function areDepsEqual(prev: any[] | undefined, next: any[]): boolean {
-  if (!prev) return false;
-  if (prev.length !== next.length) return false;
-
-  return prev.every((dep, i) => Object.is(dep, next[i]));
 }
