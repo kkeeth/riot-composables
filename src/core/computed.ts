@@ -49,14 +49,7 @@ export function createComputed<T>(
     },
   };
 
-  // Mark as dirty on component update
-  const originalUpdate = component.update.bind(component);
-
-  component.update = function (newState) {
-    // Mark computed as dirty before update
-    computedData.dirty = true;
-    return originalUpdate(newState);
-  };
+  // Note: Marking as dirty is handled by the plugin's onBeforeUpdate hook
 
   return computedRef;
 }

@@ -44,33 +44,7 @@ export function createWatch<T>(
   // Store watch data
   component.__composables__.watchers.set(watchId, watchData);
 
-  // Hook into component update to check for changes
-  const originalUpdate = component.update.bind(component);
-
-  component.update = function (newState) {
-    const result = originalUpdate(newState);
-
-    // Check if watched value changed
-    try {
-      const newValue = getter();
-
-      if (!Object.is(newValue, watchData.oldValue)) {
-        const prevValue = watchData.oldValue;
-        watchData.oldValue = newValue;
-
-        // Execute callback
-        try {
-          callback(newValue, prevValue!);
-        } catch (error) {
-          console.error('[riot-composables] Error in watch callback:', error);
-        }
-      }
-    } catch (error) {
-      console.error('[riot-composables] Error in watch getter:', error);
-    }
-
-    return result;
-  };
+  // Note: Watch checking is handled by the plugin's onBeforeUpdate hook
 }
 
 /**

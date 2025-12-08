@@ -76,9 +76,75 @@ const composablesPlugin: ComposablesPlugin = function (
     createWatch(this, getter, callback);
   };
 
-  // Wrap lifecycle hooks for cleanup
+  // Wrap lifecycle hooks for cleanup and update tracking
+  const originalOnBeforeUpdate = component.onBeforeUpdate;
   const originalOnBeforeUnmount = component.onBeforeUnmount;
   const originalOnUnmounted = component.onUnmounted;
+
+  enhancedComponent.onBeforeUpdate = function (props, state) {
+    // Mark all computed values as dirty
+    context.computed.forEach((computedData: any) => {
+      computedData.dirty = true;
+    });
+
+    // Check watchers for changes
+    context.watchers.forEach((watchData: any) => {
+      try {
+        const newValue = watchData.getter();
+        if (!Object.is(newValue, watchData.oldValue)) {
+          const prevValue = watchData.oldValue;
+          watchData.oldValue = newValue;
+
+          try {
+            watchData.callback(newValue, prevValue);
+          } catch (error) {
+            console.error('[riot-composables] Error in watch callback:', error);
+          }
+        }
+      } catch (error) {
+        console.error('[riot-composables] Error in watch getter:', error);
+      }
+    });
+
+    // Check effects for dependency changes
+    context.effects.forEach((effectData: any) => {
+      if (effectData.deps && effectData.depsGetter) {
+        const newDeps = effectData.depsGetter();
+        const hasChanged =
+          !effectData.deps ||
+          effectData.deps.length !== newDeps.length ||
+          newDeps.some((dep: any, i: number) => !Object.is(dep, effectData.deps![i]));
+
+        if (hasChanged) {
+          effectData.deps = newDeps;
+
+          // Run cleanup from previous effect if exists
+          if (effectData.cleanup) {
+            try {
+              effectData.cleanup();
+            } catch (error) {
+              console.error('[riot-composables] Error in effect cleanup:', error);
+            }
+          }
+
+          // Run the effect
+          try {
+            const cleanup = effectData.effect();
+            if (typeof cleanup === 'function') {
+              effectData.cleanup = cleanup;
+            }
+          } catch (error) {
+            console.error('[riot-composables] Error in effect:', error);
+          }
+        }
+      }
+    });
+
+    // Call original hook if exists
+    if (originalOnBeforeUpdate) {
+      return originalOnBeforeUpdate.call(this, props, state);
+    }
+  };
 
   enhancedComponent.onBeforeUnmount = function (props, state) {
     // Run all registered cleanups

@@ -36,7 +36,8 @@ export function createEffect(
     effect,
     deps: deps ? deps() : undefined,
     cleanup: undefined,
-  };
+    depsGetter: deps, // Store the getter for the plugin to use
+  } as any;
 
   // Function to run the effect
   const runEffect = () => {
@@ -72,28 +73,7 @@ export function createEffect(
     }
   };
 
-  // If deps provided, watch for changes
-  if (deps) {
-    const originalUpdate = component.update.bind(component);
-
-    component.update = function (newState) {
-      const result = originalUpdate(newState);
-
-      // Check if dependencies changed
-      const newDeps = deps();
-      const hasChanged =
-        !effectData.deps ||
-        effectData.deps.length !== newDeps.length ||
-        newDeps.some((dep, i) => !Object.is(dep, effectData.deps![i]));
-
-      if (hasChanged) {
-        effectData.deps = newDeps;
-        runEffect();
-      }
-
-      return result;
-    };
-  }
+  // Note: Dependency tracking is handled by the plugin's onBeforeUpdate hook
 
   // Register cleanup function
   component.__composables__.cleanups.push(() => {
