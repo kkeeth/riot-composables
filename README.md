@@ -29,15 +29,14 @@ npm install riot-composables
 ```typescript
 // main.ts
 import { installComposables } from 'riot-composables';
-import * as riot from 'riot';
+import { component } from 'riot';
 import App from './App.riot';
 
 // Install composables support (do this once at app startup)
 installComposables();
 
 // Mount your app as usual
-const mountApp = riot.component(App);
-mountApp(document.getElementById('root'));
+component(App)(document.getElementById('root'));
 ```
 
 ### 2. Use composables in your components
