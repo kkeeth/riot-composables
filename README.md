@@ -44,19 +44,23 @@ component(App)(document.getElementById('root'));
 ```riot
 <!-- Counter.riot -->
 <counter>
-  <h1>Count: {count}</h1>
+  <h1>Count: {reactiveState.count}</h1>
   <button onclick={increment}>+</button>
   <button onclick={decrement}>-</button>
   <button onclick={reset}>Reset</button>
-  <p if={isAtMax.value}>Maximum reached!</p>
 
   <script lang="ts">
-    import { useCounter } from 'riot-composables'
+    import { useReactive } from 'riot-composables'
 
     export default {
       onBeforeMount() {
-        const counter = useCounter(this, 0, { min: 0, max: 10 })
-        Object.assign(this, counter)
+        const reactiveState = useReactive(this, { count: 0 })
+
+        // Don't use 'this.state' - it's a special Riot.js property
+        this.reactiveState = reactiveState
+        this.increment = () => reactiveState.count++
+        this.decrement = () => reactiveState.count--
+        this.reset = () => reactiveState.count = 0
       }
     }
   </script>
@@ -74,13 +78,15 @@ import { useReactive } from 'riot-composables';
 
 export default {
   onBeforeMount() {
-    const state = useReactive(this, {
+    const reactiveState = useReactive(this, {
       count: 0,
       name: 'John',
     });
 
-    this.state = state;
-    this.increment = () => state.count++; // Auto-updates component
+    // IMPORTANT: Don't use 'this.state' as it's a special Riot.js property
+    // Use a different property name instead
+    this.reactiveState = reactiveState;
+    this.increment = () => reactiveState.count++; // Auto-updates component
   },
 };
 ```
@@ -90,28 +96,29 @@ export default {
 Handle side effects with dependency tracking:
 
 ```typescript
-import { useEffect } from 'riot-composables';
+import { useReactive, useEffect } from 'riot-composables';
 
 export default {
   onBeforeMount() {
-    const state = useReactive(this, { count: 0 });
+    const reactiveState = useReactive(this, { count: 0 });
 
     // Run when count changes
     useEffect(
       this,
       () => {
-        console.log('Count is now:', state.count);
-        document.title = `Count: ${state.count}`;
+        console.log('Count is now:', reactiveState.count);
+        document.title = `Count: ${reactiveState.count}`;
 
         // Optional cleanup
         return () => {
           console.log('Cleaning up...');
         };
       },
-      () => [state.count],
+      () => [reactiveState.count],
     );
 
-    this.state = state;
+    this.reactiveState = reactiveState;
+    this.increment = () => reactiveState.count++;
   },
 };
 ```
@@ -125,12 +132,12 @@ import { useReactive, useComputed } from 'riot-composables';
 
 export default {
   onBeforeMount() {
-    const state = useReactive(this, { count: 5 });
-    const doubled = useComputed(this, () => state.count * 2);
+    const reactiveState = useReactive(this, { count: 5 });
+    const doubled = useComputed(this, () => reactiveState.count * 2);
 
     console.log(doubled.value); // 10 (cached)
 
-    this.state = state;
+    this.reactiveState = reactiveState;
     this.doubled = doubled;
   },
 };
@@ -141,58 +148,111 @@ export default {
 Watch values and react to changes:
 
 ```typescript
-import { useWatch } from 'riot-composables';
+import { useReactive, useWatch } from 'riot-composables';
 
 export default {
   onBeforeMount() {
-    const state = useReactive(this, { count: 0 });
+    const reactiveState = useReactive(this, { count: 0 });
 
     useWatch(
       this,
-      () => state.count,
+      () => reactiveState.count,
       (newVal, oldVal) => {
         console.log(`Count changed from ${oldVal} to ${newVal}`);
       },
     );
 
-    this.state = state;
+    this.reactiveState = reactiveState;
+    this.increment = () => reactiveState.count++;
   },
 };
 ```
 
-## Built-in Composables
-
-### useCounter
-
-```typescript
-import { useCounter } from 'riot-composables';
-
-const counter = useCounter(this, 0, {
-  min: 0,
-  max: 100,
-  step: 1,
-});
-
-counter.increment();
-counter.decrement();
-counter.set(50);
-console.log(counter.isAtMax.value); // false
-```
-
-### useToggle
-
-```typescript
-import { useToggle } from 'riot-composables';
-
-const modal = useToggle(this, false);
-
-modal.toggle(); // true
-modal.setTrue(); // true
-modal.setFalse(); // false
-console.log(modal.value); // false
-```
-
 ## Creating Custom Composables
+
+You can create your own composables by combining the core APIs. Here's an example of a counter composable with min/max constraints:
+
+```typescript
+// composables/useCounter.ts
+import { useReactive, useComputed } from 'riot-composables';
+import type { EnhancedComponent } from 'riot-composables';
+
+export interface UseCounterOptions {
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export function useCounter(
+  component: EnhancedComponent,
+  initialValue = 0,
+  options: UseCounterOptions = {}
+) {
+  const { min = -Infinity, max = Infinity, step = 1 } = options;
+
+  const state = useReactive(component, {
+    count: Math.max(min, Math.min(max, initialValue)),
+  });
+
+  const isAtMin = useComputed(component, () => state.count <= min);
+  const isAtMax = useComputed(component, () => state.count >= max);
+
+  const increment = () => {
+    state.count = Math.min(max, state.count + step);
+  };
+
+  const decrement = () => {
+    state.count = Math.max(min, state.count - step);
+  };
+
+  const reset = () => {
+    state.count = initialValue;
+  };
+
+  const set = (value: number) => {
+    state.count = Math.max(min, Math.min(max, value));
+  };
+
+  return {
+    get count() {
+      return state.count;
+    },
+    increment,
+    decrement,
+    reset,
+    set,
+    isAtMin,
+    isAtMax,
+  };
+}
+```
+
+Then use it in your component:
+
+```riot
+<counter>
+  <h1>Count: {counter.count}</h1>
+  <button onclick={counter.increment}>+</button>
+  <button onclick={counter.decrement}>-</button>
+  <button onclick={counter.reset}>Reset</button>
+  <p if={counter.isAtMax.value}>Maximum reached!</p>
+
+  <script>
+    import { useCounter } from './composables/useCounter'
+
+    export default {
+      onBeforeMount() {
+        const counter = useCounter(this, 0, { min: 0, max: 10 })
+        this.counter = counter
+      }
+    }
+  </script>
+</counter>
+```
+
+### Another Example: Form Handling
+
+Here's a more complex example showing form state management:
 
 ```typescript
 // composables/useForm.ts
@@ -229,7 +289,7 @@ export function useForm(component: EnhancedComponent, initialValues: any) {
 }
 ```
 
-Then use it in your component:
+Use it in your component:
 
 ```riot
 <login-form>
@@ -255,6 +315,8 @@ Then use it in your component:
   </script>
 </login-form>
 ```
+
+For more custom composable examples, see the [examples](./examples) directory.
 
 ## Architecture
 

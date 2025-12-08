@@ -15,7 +15,7 @@ import type { EnhancedComponent } from '../types';
  * @example
  * ```riot
  * <my-component>
- *   <p>Count: {state.count}</p>
+ *   <p>Count: {reactiveState.count}</p>
  *   <button onclick={increment}>+</button>
  *
  *   <script>
@@ -23,10 +23,11 @@ import type { EnhancedComponent } from '../types';
  *
  *     export default {
  *       onBeforeMount() {
- *         const state = useReactive(this, { count: 0 })
+ *         const reactiveState = useReactive(this, { count: 0 })
  *
- *         this.state = state
- *         this.increment = () => state.count++
+ *         // Don't use 'this.state' - it's a special Riot.js property
+ *         this.reactiveState = reactiveState
+ *         this.increment = () => reactiveState.count++
  *       }
  *     }
  *   </script>
