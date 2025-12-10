@@ -125,20 +125,31 @@ export default {
 
 ### useComputed
 
-Create cached computed values:
+Create cached computed values that automatically recalculate when dependencies change:
 
 ```typescript
 import { useReactive, useComputed } from 'riot-composables';
 
 export default {
   onBeforeMount() {
-    const reactiveState = useReactive(this, { count: 5 });
-    const doubled = useComputed(this, () => reactiveState.count * 2);
+    const reactiveState = useReactive(this, {
+      price: 10,
+      quantity: 1,
+      taxRate: 0.1,
+    });
 
-    console.log(doubled.value); // 10 (cached)
+    // Computed value automatically updates when dependencies change
+    const total = useComputed(this, () => {
+      const subtotal = reactiveState.price * reactiveState.quantity;
+      return (subtotal * (1 + reactiveState.taxRate)).toFixed(2);
+    });
 
     this.reactiveState = reactiveState;
-    this.doubled = doubled;
+    this.total = total;
+    this.increaseQuantity = () => reactiveState.quantity++;
+    this.decreaseQuantity = () => {
+      if (reactiveState.quantity > 0) reactiveState.quantity--;
+    };
   },
 };
 ```
@@ -175,7 +186,6 @@ You can create your own composables by combining the core APIs. Here's an exampl
 ```typescript
 // composables/useCounter.ts
 import { useReactive, useComputed } from 'riot-composables';
-import type { EnhancedComponent } from 'riot-composables';
 
 export interface UseCounterOptions {
   min?: number;
@@ -184,9 +194,9 @@ export interface UseCounterOptions {
 }
 
 export function useCounter(
-  component: EnhancedComponent,
+  component,
   initialValue = 0,
-  options: UseCounterOptions = {}
+  options: UseCounterOptions = {},
 ) {
   const { min = -Infinity, max = Infinity, step = 1 } = options;
 
@@ -252,14 +262,13 @@ Then use it in your component:
 
 ### Another Example: Form Handling
 
-Here's a more complex example showing form state management:
+Here's a more complex example showing form state management with validation:
 
 ```typescript
 // composables/useForm.ts
 import { useReactive, useComputed } from 'riot-composables';
-import type { EnhancedComponent } from 'riot-composables';
 
-export function useForm(component: EnhancedComponent, initialValues: any) {
+export function useForm(component, initialValues) {
   const state = useReactive(component, {
     values: initialValues,
     errors: {},
@@ -267,51 +276,144 @@ export function useForm(component: EnhancedComponent, initialValues: any) {
   });
 
   const isValid = useComputed(component, () => {
-    return Object.keys(state.errors).length === 0;
+    return (
+      Object.keys(state.errors).length === 0 &&
+      Object.keys(state.touched).length > 0
+    );
   });
 
-  const handleChange = (field: string, value: any) => {
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      return 'Email is required';
+    }
+    if (!emailRegex.test(email)) {
+      return 'Invalid email format';
+    }
+    return null;
+  };
+
+  const validatePassword = (password) => {
+    if (!password) {
+      return 'Password is required';
+    }
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
+  };
+
+  const validate = () => {
+    const newErrors = {};
+
+    const emailError = validateEmail(state.values.email);
+    if (emailError) newErrors.email = emailError;
+
+    const passwordError = validatePassword(state.values.password);
+    if (passwordError) newErrors.password = passwordError;
+
+    state.errors = newErrors;
+  };
+
+  const handleChange = (field, value) => {
     state.values[field] = value;
     state.touched[field] = true;
     validate();
   };
 
-  const validate = () => {
-    // Your validation logic
+  const handleSubmit = (callback) => {
+    // Mark all fields as touched
+    Object.keys(state.values).forEach((field) => {
+      state.touched[field] = true;
+    });
+
+    validate();
+
+    if (isValid.value) {
+      callback(state.values);
+    }
   };
 
   return {
     state,
     isValid,
     handleChange,
-    validate,
+    handleSubmit,
   };
 }
 ```
 
 Use it in your component:
 
-```riot
+```html
 <login-form>
-  <input
-    value={form.values.email}
-    onchange={e => handleChange('email', e.target.value)}
-  />
-  <span if={form.errors.email}>{form.errors.email}</span>
+  <form onsubmit="{onSubmit}">
+    <div>
+      <input
+        type="email"
+        value="{form.state.values.email}"
+        oninput="{handleEmailChange}"
+        placeholder="Email"
+      />
+      <p
+        if="{form.state.touched.email"
+        &&
+        form.state.errors.email}
+        style="color: red;"
+      >
+        {form.state.errors.email}
+      </p>
+    </div>
+
+    <div>
+      <input
+        type="password"
+        value="{form.state.values.password}"
+        oninput="{handlePasswordChange}"
+        placeholder="Password"
+      />
+      <p
+        if="{form.state.touched.password"
+        &&
+        form.state.errors.password}
+        style="color: red;"
+      >
+        {form.state.errors.password}
+      </p>
+    </div>
+
+    <button type="submit" disabled="{!form.isValid.value}">Submit</button>
+  </form>
 
   <script>
-    import { useForm } from './composables/useForm'
+    import { useForm } from './composables/useForm';
 
     export default {
       onBeforeMount() {
-        const { state: form, handleChange } = useForm(this, {
+        const form = useForm(this, {
           email: '',
-          password: ''
-        })
+          password: '',
+        });
 
-        Object.assign(this, { form, handleChange })
-      }
-    }
+        this.form = form;
+
+        this.handleEmailChange = (e) => {
+          form.handleChange('email', e.target.value);
+        };
+
+        this.handlePasswordChange = (e) => {
+          form.handleChange('password', e.target.value);
+        };
+
+        this.onSubmit = (e) => {
+          e.preventDefault();
+          form.handleSubmit((values) => {
+            console.log('Form submitted:', values);
+            // Handle successful submission
+          });
+        };
+      },
+    };
   </script>
 </login-form>
 ```
