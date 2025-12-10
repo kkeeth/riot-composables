@@ -125,7 +125,7 @@ riot-composables uses a 3-layer architecture:
 2. **Layer 2: Enhanced API** - Adds `$reactive`, `$effect`, `$computed`, `$watch` methods
 3. **Layer 3: Composables** - High-level reusable functions developers use
 
-## TypeScript Support
+## 🚧 TypeScript Support 🚧
 
 riot-composables provides full TypeScript support with proper type inference.
 
@@ -152,6 +152,9 @@ export default {
 ```
 
 See the [User Guide](./docs/guide.md#typescript-usage) for more TypeScript examples.
+
+### NOTE
+Currently under review, so it's likely not functioning properly. If you have a fix, please submit a pull request!
 
 ## Why riot-composables?
 
