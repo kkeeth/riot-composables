@@ -67,137 +67,28 @@ component(App)(document.getElementById('root'));
 </counter>
 ```
 
-## Core Composables
+## Available Composables
 
-### useReactive
+### Core Composables
 
-Create reactive state that automatically triggers component updates:
+- **`useReactive`** - Create reactive state that automatically triggers component updates
+- **`useEffect`** - Handle side effects with dependency tracking (similar to React's useEffect)
+- **`useComputed`** - Create cached computed values that recalculate when dependencies change
+- **`useWatch`** - Watch values and execute callbacks when they change (similar to Vue's watch)
+- **`useMount`** - Convenience wrapper for running code only on component mount
+- **`useUnmount`** - Convenience wrapper for cleanup on component unmount
 
-```typescript
-import { useReactive } from 'riot-composables';
+For detailed usage and examples, see the [User Guide](./docs/guide.md).
 
-export default {
-  onBeforeMount() {
-    const reactiveState = useReactive(this, {
-      count: 0,
-      name: 'John',
-    });
+### Creating Custom Composables
 
-    // IMPORTANT: Don't use 'this.state' as it's a special Riot.js property
-    // Use a different property name instead
-    this.reactiveState = reactiveState;
-    this.increment = () => reactiveState.count++; // Auto-updates component
-  },
-};
-```
-
-### useEffect
-
-Handle side effects with dependency tracking:
+You can create your own composables by combining the core APIs:
 
 ```typescript
-import { useReactive, useEffect } from 'riot-composables';
-
-export default {
-  onBeforeMount() {
-    const reactiveState = useReactive(this, { count: 0 });
-
-    // Run when count changes
-    useEffect(
-      this,
-      () => {
-        console.log('Count is now:', reactiveState.count);
-        document.title = `Count: ${reactiveState.count}`;
-
-        // Optional cleanup
-        return () => {
-          console.log('Cleaning up...');
-        };
-      },
-      () => [reactiveState.count],
-    );
-
-    this.reactiveState = reactiveState;
-    this.increment = () => reactiveState.count++;
-  },
-};
-```
-
-### useComputed
-
-Create cached computed values that automatically recalculate when dependencies change:
-
-```typescript
+// Example: Counter with min/max constraints
 import { useReactive, useComputed } from 'riot-composables';
 
-export default {
-  onBeforeMount() {
-    const reactiveState = useReactive(this, {
-      price: 10,
-      quantity: 1,
-      taxRate: 0.1,
-    });
-
-    // Computed value automatically updates when dependencies change
-    const total = useComputed(this, () => {
-      const subtotal = reactiveState.price * reactiveState.quantity;
-      return (subtotal * (1 + reactiveState.taxRate)).toFixed(2);
-    });
-
-    this.reactiveState = reactiveState;
-    this.total = total;
-    this.increaseQuantity = () => reactiveState.quantity++;
-    this.decreaseQuantity = () => {
-      if (reactiveState.quantity > 0) reactiveState.quantity--;
-    };
-  },
-};
-```
-
-### useWatch
-
-Watch values and react to changes:
-
-```typescript
-import { useReactive, useWatch } from 'riot-composables';
-
-export default {
-  onBeforeMount() {
-    const reactiveState = useReactive(this, { count: 0 });
-
-    useWatch(
-      this,
-      () => reactiveState.count,
-      (newVal, oldVal) => {
-        console.log(`Count changed from ${oldVal} to ${newVal}`);
-      },
-    );
-
-    this.reactiveState = reactiveState;
-    this.increment = () => reactiveState.count++;
-  },
-};
-```
-
-## Creating Custom Composables
-
-You can create your own composables by combining the core APIs. Here's an example of a counter composable with min/max constraints:
-
-```typescript
-// composables/useCounter.ts
-import { useReactive, useComputed } from 'riot-composables';
-
-export interface UseCounterOptions {
-  min?: number;
-  max?: number;
-  step?: number;
-}
-
-export function useCounter(
-  component,
-  initialValue = 0,
-  options: UseCounterOptions = {},
-) {
+export function useCounter(component, initialValue = 0, options = {}) {
   const { min = -Infinity, max = Infinity, step = 1 } = options;
 
   const state = useReactive(component, {
@@ -207,218 +98,24 @@ export function useCounter(
   const isAtMin = useComputed(component, () => state.count <= min);
   const isAtMax = useComputed(component, () => state.count >= max);
 
-  const increment = () => {
-    state.count = Math.min(max, state.count + step);
-  };
-
-  const decrement = () => {
-    state.count = Math.max(min, state.count - step);
-  };
-
-  const reset = () => {
-    state.count = initialValue;
-  };
-
-  const set = (value: number) => {
-    state.count = Math.max(min, Math.min(max, value));
-  };
-
   return {
-    get count() {
-      return state.count;
-    },
-    increment,
-    decrement,
-    reset,
-    set,
+    get count() { return state.count; },
+    increment: () => state.count = Math.min(max, state.count + step),
+    decrement: () => state.count = Math.max(min, state.count - step),
+    reset: () => state.count = initialValue,
     isAtMin,
     isAtMax,
   };
 }
 ```
 
-Then use it in your component:
+More examples in the [User Guide](./docs/guide.md).
 
-```riot
-<counter>
-  <h1>Count: {counter.count}</h1>
-  <button onclick={counter.increment}>+</button>
-  <button onclick={counter.decrement}>-</button>
-  <button onclick={counter.reset}>Reset</button>
-  <p if={counter.isAtMax.value}>Maximum reached!</p>
+## Documentation
 
-  <script>
-    import { useCounter } from './composables/useCounter'
-
-    export default {
-      onBeforeMount() {
-        const counter = useCounter(this, 0, { min: 0, max: 10 })
-        this.counter = counter
-      }
-    }
-  </script>
-</counter>
-```
-
-### Another Example: Form Handling
-
-Here's a more complex example showing form state management with validation:
-
-```typescript
-// composables/useForm.ts
-import { useReactive, useComputed } from 'riot-composables';
-
-export function useForm(component, initialValues) {
-  const state = useReactive(component, {
-    values: initialValues,
-    errors: {},
-    touched: {},
-  });
-
-  const isValid = useComputed(component, () => {
-    return (
-      Object.keys(state.errors).length === 0 &&
-      Object.keys(state.touched).length > 0
-    );
-  });
-
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) {
-      return 'Email is required';
-    }
-    if (!emailRegex.test(email)) {
-      return 'Invalid email format';
-    }
-    return null;
-  };
-
-  const validatePassword = (password) => {
-    if (!password) {
-      return 'Password is required';
-    }
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-    return null;
-  };
-
-  const validate = () => {
-    const newErrors = {};
-
-    const emailError = validateEmail(state.values.email);
-    if (emailError) newErrors.email = emailError;
-
-    const passwordError = validatePassword(state.values.password);
-    if (passwordError) newErrors.password = passwordError;
-
-    state.errors = newErrors;
-  };
-
-  const handleChange = (field, value) => {
-    state.values[field] = value;
-    state.touched[field] = true;
-    validate();
-  };
-
-  const handleSubmit = (callback) => {
-    // Mark all fields as touched
-    Object.keys(state.values).forEach((field) => {
-      state.touched[field] = true;
-    });
-
-    validate();
-
-    if (isValid.value) {
-      callback(state.values);
-    }
-  };
-
-  return {
-    state,
-    isValid,
-    handleChange,
-    handleSubmit,
-  };
-}
-```
-
-Use it in your component:
-
-```html
-<login-form>
-  <form onsubmit="{onSubmit}">
-    <div>
-      <input
-        type="email"
-        value="{form.state.values.email}"
-        oninput="{handleEmailChange}"
-        placeholder="Email"
-      />
-      <p
-        if="{form.state.touched.email"
-        &&
-        form.state.errors.email}
-        style="color: red;"
-      >
-        {form.state.errors.email}
-      </p>
-    </div>
-
-    <div>
-      <input
-        type="password"
-        value="{form.state.values.password}"
-        oninput="{handlePasswordChange}"
-        placeholder="Password"
-      />
-      <p
-        if="{form.state.touched.password"
-        &&
-        form.state.errors.password}
-        style="color: red;"
-      >
-        {form.state.errors.password}
-      </p>
-    </div>
-
-    <button type="submit" disabled="{!form.isValid.value}">Submit</button>
-  </form>
-
-  <script>
-    import { useForm } from './composables/useForm';
-
-    export default {
-      onBeforeMount() {
-        const form = useForm(this, {
-          email: '',
-          password: '',
-        });
-
-        this.form = form;
-
-        this.handleEmailChange = (e) => {
-          form.handleChange('email', e.target.value);
-        };
-
-        this.handlePasswordChange = (e) => {
-          form.handleChange('password', e.target.value);
-        };
-
-        this.onSubmit = (e) => {
-          e.preventDefault();
-          form.handleSubmit((values) => {
-            console.log('Form submitted:', values);
-            // Handle successful submission
-          });
-        };
-      },
-    };
-  </script>
-</login-form>
-```
-
-For more custom composable examples, see the [examples](./examples) directory.
+- **[User Guide](./docs/guide.md)** - Complete guide with practical examples and best practices
+- **[API Reference](./docs/api.md)** - Detailed API documentation and technical reference
+- **[Examples](./examples)** - Real-world examples and use cases
 
 ## Architecture
 
@@ -428,111 +125,33 @@ riot-composables uses a 3-layer architecture:
 2. **Layer 2: Enhanced API** - Adds `$reactive`, `$effect`, `$computed`, `$watch` methods
 3. **Layer 3: Composables** - High-level reusable functions developers use
 
-## 🚧 TypeScript Support 🚧
+## TypeScript Support
 
 riot-composables provides full TypeScript support with proper type inference.
 
-**Note** Currently under review, so it is not functioning. If you can fix it, please submit a pull request!
-
-### Using TypeScript in Riot Components
-
-**Important**: TypeScript syntax in `.riot` files requires a build process (Vite, Webpack, Rollup, etc.). The examples below show TypeScript code that will be transpiled during build.
-
-```riot
-<my-component>
-  <p>Count: {state.count}</p>
-  <p>Name: {state.name}</p>
-  <button onclick={increment}>Increment</button>
-
-  <script lang="ts">
-    import { RiotComponent, withTypes } from 'riot';
-    import { useReactive } from 'riot-composables'
-
-    interface MyComponentProps {}
-    interface MyComponentState {
-      count: number
-      name: string
-    }
-
-    export interface MyComponent extends RiotComponent<MyComponentProps, MyComponentState> {
-      state: MyComponentState
-      increment: () => void
-    }
-
-    export default withTypes<MyComponent>({
-      onBeforeMount() {
-        const state = useReactive<MyState>(this, {
-          count: 0,
-          name: 'John',
-        })
-
-        this.state = state
-        this.increment = () => state.count++
-
-        // TypeScript will catch type errors at compile time
-        state.count = 10 // ✅ OK
-        // state.invalid = 'error' // ❌ TypeScript error: Property 'invalid' does not exist
-      }
-    })
-  </script>
-</my-component>
-```
-
-### Creating Typed Composables
-
-When creating custom composables, use TypeScript for better type safety:
-
 ```typescript
 import type { EnhancedComponent } from 'riot-composables';
-import { useReactive, useComputed } from 'riot-composables';
+import { useReactive } from 'riot-composables';
 
-export interface UseCounterOptions {
-  min?: number;
-  max?: number;
-  step?: number;
-}
-
-export interface UseCounterReturn {
+interface MyState {
   count: number;
-  increment: () => void;
-  decrement: () => void;
-  isAtMin: { readonly value: boolean };
-  isAtMax: { readonly value: boolean };
+  name: string;
 }
 
-export const useCounter => (
-  component: EnhancedComponent,
-  initialValue = 0,
-  options: UseCounterOptions = {},
-): UseCounterReturn {
-  const { min = -Infinity, max = Infinity, step = 1 } = options;
+export default {
+  onBeforeMount() {
+    const state = useReactive<MyState>(this, {
+      count: 0,
+      name: 'John',
+    });
 
-  const state = useReactive(component, {
-    count: Math.max(min, Math.min(max, initialValue)),
-  });
-
-  const isAtMin = useComputed(component, () => state.count <= min);
-  const isAtMax = useComputed(component, () => state.count >= max);
-
-  return {
-    get count() {
-      return state.count;
-    },
-    increment: () => {
-      state.count = Math.min(max, state.count + step);
-    },
-    decrement: () => {
-      state.count = Math.max(min, state.count - step);
-    },
-    isAtMin,
-    isAtMax,
-  };
-};
+    this.state = state;
+    this.increment = () => state.count++; // Type-safe!
+  }
+}
 ```
 
-## API Reference
-
-See [API Documentation](./docs/api.md) for complete API reference.
+See the [User Guide](./docs/guide.md#typescript-usage) for more TypeScript examples.
 
 ## Why riot-composables?
 
