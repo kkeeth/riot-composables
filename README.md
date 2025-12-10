@@ -428,29 +428,105 @@ riot-composables uses a 3-layer architecture:
 2. **Layer 2: Enhanced API** - Adds `$reactive`, `$effect`, `$computed`, `$watch` methods
 3. **Layer 3: Composables** - High-level reusable functions developers use
 
-## TypeScript Support
+## 🚧 TypeScript Support 🚧
 
-Full TypeScript support with proper type inference:
+riot-composables provides full TypeScript support with proper type inference.
+
+**Note** Currently under review, so it is not functioning. If you can fix it, please submit a pull request!
+
+### Using TypeScript in Riot Components
+
+**Important**: TypeScript syntax in `.riot` files requires a build process (Vite, Webpack, Rollup, etc.). The examples below show TypeScript code that will be transpiled during build.
+
+```riot
+<my-component>
+  <p>Count: {state.count}</p>
+  <p>Name: {state.name}</p>
+  <button onclick={increment}>Increment</button>
+
+  <script lang="ts">
+    import { RiotComponent, withTypes } from 'riot';
+    import { useReactive } from 'riot-composables'
+
+    interface MyComponentProps {}
+    interface MyComponentState {
+      count: number
+      name: string
+    }
+
+    export interface MyComponent extends RiotComponent<MyComponentProps, MyComponentState> {
+      state: MyComponentState
+      increment: () => void
+    }
+
+    export default withTypes<MyComponent>({
+      onBeforeMount() {
+        const state = useReactive<MyState>(this, {
+          count: 0,
+          name: 'John',
+        })
+
+        this.state = state
+        this.increment = () => state.count++
+
+        // TypeScript will catch type errors at compile time
+        state.count = 10 // ✅ OK
+        // state.invalid = 'error' // ❌ TypeScript error: Property 'invalid' does not exist
+      }
+    })
+  </script>
+</my-component>
+```
+
+### Creating Typed Composables
+
+When creating custom composables, use TypeScript for better type safety:
 
 ```typescript
 import type { EnhancedComponent } from 'riot-composables';
+import { useReactive, useComputed } from 'riot-composables';
 
-interface MyState {
-  count: number;
-  name: string;
+export interface UseCounterOptions {
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
-export default {
-  onBeforeMount(this: EnhancedComponent) {
-    const state = useReactive<MyState>(this, {
-      count: 0,
-      name: 'John',
-    });
+export interface UseCounterReturn {
+  count: number;
+  increment: () => void;
+  decrement: () => void;
+  isAtMin: { readonly value: boolean };
+  isAtMax: { readonly value: boolean };
+}
 
-    // Full type safety
-    state.count = 10; // ✅
-    state.invalid = 'error'; // ❌ Type error
-  },
+export const useCounter => (
+  component: EnhancedComponent,
+  initialValue = 0,
+  options: UseCounterOptions = {},
+): UseCounterReturn {
+  const { min = -Infinity, max = Infinity, step = 1 } = options;
+
+  const state = useReactive(component, {
+    count: Math.max(min, Math.min(max, initialValue)),
+  });
+
+  const isAtMin = useComputed(component, () => state.count <= min);
+  const isAtMax = useComputed(component, () => state.count >= max);
+
+  return {
+    get count() {
+      return state.count;
+    },
+    increment: () => {
+      state.count = Math.min(max, state.count + step);
+    },
+    decrement: () => {
+      state.count = Math.max(min, state.count - step);
+    },
+    isAtMin,
+    isAtMax,
+  };
 };
 ```
 
@@ -482,7 +558,7 @@ riot-composables solves these problems while maintaining Riot.js's philosophy of
 
 ## License
 
-MIT
+[MIT](https://github.com/kkeeth/riot-composables/blob/main/LICENSE)
 
 ## Contributing
 
