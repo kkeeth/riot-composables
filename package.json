@@ -20,6 +20,7 @@
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "test": "vitest",
+    "coverage": "vitest --coverage",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm build"
   },
@@ -39,6 +40,7 @@
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/node": "^20.11.0",
+    "@vitest/coverage-v8": "^4.0.15",
     "jsdom": "^27.0.0",
     "riot": "^10.0.1",
     "rollup": "^4.9.6",
