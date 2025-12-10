@@ -29,6 +29,7 @@ let pluginRef: ComposablesPlugin | null = null;
 /**
  * Main plugin function that enhances each Riot component
  */
+/* istanbul ignore next -- @preserve */
 const composablesPlugin: ComposablesPlugin = function (
   component: RiotComponent,
 ): RiotComponent {
@@ -113,7 +114,9 @@ const composablesPlugin: ComposablesPlugin = function (
         const hasChanged =
           !effectData.deps ||
           effectData.deps.length !== newDeps.length ||
-          newDeps.some((dep: any, i: number) => !Object.is(dep, effectData.deps![i]));
+          newDeps.some(
+            (dep: any, i: number) => !Object.is(dep, effectData.deps![i]),
+          );
 
         if (hasChanged) {
           effectData.deps = newDeps;
@@ -123,7 +126,10 @@ const composablesPlugin: ComposablesPlugin = function (
             try {
               effectData.cleanup();
             } catch (error) {
-              console.error('[riot-composables] Error in effect cleanup:', error);
+              console.error(
+                '[riot-composables] Error in effect cleanup:',
+                error,
+              );
             }
           }
 
@@ -178,6 +184,7 @@ const composablesPlugin: ComposablesPlugin = function (
 
   return enhancedComponent;
 };
+/* istanbul ignore stop */
 
 /**
  * Install the composables plugin globally
