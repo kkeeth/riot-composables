@@ -35,9 +35,9 @@ export function createEffect(
   const effectData: EffectData = {
     effect,
     deps: deps ? deps() : undefined,
+    depsGetter: deps,
     cleanup: undefined,
-    depsGetter: deps, // Store the getter for the plugin to use
-  } as any;
+  };
 
   // Function to run the effect
   const runEffect = () => {

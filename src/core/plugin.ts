@@ -84,12 +84,12 @@ const composablesPlugin: ComposablesPlugin = function (
 
   enhancedComponent.onBeforeUpdate = function (props, state) {
     // Mark all computed values as dirty
-    context.computed.forEach((computedData: any) => {
+    context.computed.forEach((computedData) => {
       computedData.dirty = true;
     });
 
     // Check watchers for changes
-    context.watchers.forEach((watchData: any) => {
+    context.watchers.forEach((watchData) => {
       try {
         const newValue = watchData.getter();
         if (!Object.is(newValue, watchData.oldValue)) {
@@ -108,15 +108,13 @@ const composablesPlugin: ComposablesPlugin = function (
     });
 
     // Check effects for dependency changes
-    context.effects.forEach((effectData: any) => {
+    context.effects.forEach((effectData) => {
       if (effectData.deps && effectData.depsGetter) {
         const newDeps = effectData.depsGetter();
         const hasChanged =
           !effectData.deps ||
           effectData.deps.length !== newDeps.length ||
-          newDeps.some(
-            (dep: any, i: number) => !Object.is(dep, effectData.deps![i]),
-          );
+          newDeps.some((dep, i) => !Object.is(dep, effectData.deps![i]));
 
         if (hasChanged) {
           effectData.deps = newDeps;

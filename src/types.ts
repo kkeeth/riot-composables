@@ -25,7 +25,8 @@ export type DepsGetter = () => any[];
  */
 export interface EffectData {
   effect: EffectFunction;
-  deps?: any[];
+  deps?: unknown[];
+  depsGetter?: DepsGetter;
   cleanup?: EffectCleanup;
 }
 
