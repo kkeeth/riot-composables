@@ -6,6 +6,17 @@
 import type { EnhancedComponent } from '../types';
 
 /**
+ * Symbol to mark reactive objects
+ */
+const REACTIVE_MARKER = Symbol('__isReactive__');
+
+/**
+ * WeakMap to store original objects for reactive proxies
+ */
+const reactiveToRaw = new WeakMap<object, object>();
+const rawToReactive = new WeakMap<object, object>();
+
+/**
  * Create a reactive state object that automatically triggers component updates
  *
  * @param component - The Riot component instance
@@ -24,41 +35,55 @@ export function createReactive<T extends object>(
 ): T {
   const stateId = Symbol('reactive-state');
 
-  // Check if state already exists (shouldn't happen in normal usage)
-  if (component.__composables__.states.has(stateId)) {
-    console.warn(
-      '[riot-composables] Reactive state already created for this component',
-    );
-    return component.__composables__.states.get(stateId);
+  // Return existing proxy if already reactive
+  const existingProxy = rawToReactive.get(initialState);
+  if (existingProxy) {
+    return existingProxy as T;
   }
 
   // Create a deep reactive proxy
-  const createProxy = (target: any, path: string[] = []): any => {
-    return new Proxy(target, {
-      get(obj, prop) {
-        const value = obj[prop];
+  const createProxy = <U extends object>(target: U): U => {
+    // Check if already proxied
+    const existing = rawToReactive.get(target);
+    if (existing) {
+      return existing as U;
+    }
 
-        // If value is an object, return a proxied version
-        if (
-          value !== null &&
-          typeof value === 'object' &&
-          !Array.isArray(value)
-        ) {
-          return createProxy(value, [...path, String(prop)]);
+    const proxy = new Proxy(target, {
+      get(obj, prop) {
+        // Return reactive marker
+        if (prop === REACTIVE_MARKER) {
+          return true;
+        }
+
+        const value = Reflect.get(obj, prop);
+
+        // If value is an object or array, return a proxied version
+        if (value !== null && typeof value === 'object') {
+          return createProxy(value);
         }
 
         return value;
       },
 
-      set(obj, prop, value) {
-        const oldValue = obj[prop];
-
-        // Only update if value actually changed
-        if (oldValue === value) {
+      has(obj, prop) {
+        // Check for reactive marker
+        if (prop === REACTIVE_MARKER) {
           return true;
         }
 
-        obj[prop] = value;
+        return Reflect.has(obj, prop);
+      },
+
+      set(obj, prop, value) {
+        const oldValue = Reflect.get(obj, prop);
+
+        // Only update if value actually changed
+        if (Object.is(oldValue, value)) {
+          return true;
+        }
+
+        const result = Reflect.set(obj, prop, value);
 
         // Trigger component update
         try {
@@ -70,14 +95,15 @@ export function createReactive<T extends object>(
           );
         }
 
-        return true;
+        return result;
       },
 
       deleteProperty(obj, prop) {
-        if (prop in obj) {
-          delete obj[prop];
+        const hadKey = Reflect.has(obj, prop);
+        const result = Reflect.deleteProperty(obj, prop);
 
-          // Trigger component update
+        // Only trigger update if property existed
+        if (hadKey && result) {
           try {
             component.update();
           } catch (error) {
@@ -88,9 +114,15 @@ export function createReactive<T extends object>(
           }
         }
 
-        return true;
+        return result;
       },
     });
+
+    // Store mappings
+    reactiveToRaw.set(proxy, target);
+    rawToReactive.set(target, proxy);
+
+    return proxy;
   };
 
   const proxy = createProxy(initialState);
@@ -103,27 +135,31 @@ export function createReactive<T extends object>(
 
 /**
  * Check if an object is reactive
+ *
+ * @param value - Value to check
+ * @returns true if value is a reactive proxy
  */
-export function isReactive(value: any): boolean {
+export function isReactive(value: unknown): boolean {
   return (
-    value !== null && typeof value === 'object' && '__isReactive__' in value
+    value !== null &&
+    typeof value === 'object' &&
+    REACTIVE_MARKER in value
   );
 }
 
 /**
  * Get the raw (non-proxied) value of a reactive object
  * Useful for comparisons and debugging
+ *
+ * @param reactive - Reactive object
+ * @returns Original non-reactive object
  */
 export function toRaw<T>(reactive: T): T {
-  // Since we're using simple Proxy, we need to create a new object
-  // In a production implementation, we'd track the original reference
   if (typeof reactive !== 'object' || reactive === null) {
     return reactive;
   }
 
-  if (Array.isArray(reactive)) {
-    return reactive.slice() as T;
-  }
-
-  return { ...reactive } as T;
+  // Get original object from WeakMap
+  const raw = reactiveToRaw.get(reactive as object);
+  return (raw ?? reactive) as T;
 }

@@ -127,9 +127,16 @@ describe('core/reactive', () => {
       expect(isReactive([])).toBe(false);
     });
 
-    it('should return true for reactive objects with __isReactive__ property', () => {
-      const reactive = { __isReactive__: true };
+    it('should return true for reactive objects created by createReactive', () => {
+      const component = createMockComponent();
+      const reactive = createReactive(component, { count: 0 });
       expect(isReactive(reactive)).toBe(true);
+    });
+
+    it('should return true for nested reactive objects', () => {
+      const component = createMockComponent();
+      const reactive = createReactive(component, { user: { name: 'John' } });
+      expect(isReactive(reactive.user)).toBe(true);
     });
   });
 
@@ -142,29 +149,32 @@ describe('core/reactive', () => {
       expect(toRaw(undefined)).toBe(undefined);
     });
 
-    it('should return a shallow copy of objects', () => {
+    it('should return original object from reactive proxy', () => {
+      const component = createMockComponent();
       const original = { a: 1, b: 2 };
-      const raw = toRaw(original);
+      const reactive = createReactive(component, original);
+      const raw = toRaw(reactive);
 
       expect(raw).toEqual(original);
-      expect(raw).not.toBe(original); // Different reference
+      expect(raw).toBe(original); // Should be the same reference
     });
 
-    it('should return a shallow copy of arrays', () => {
+    it('should return original array from reactive proxy', () => {
+      const component = createMockComponent();
       const original = [1, 2, 3];
-      const raw = toRaw(original);
+      const reactive = createReactive(component, original);
+      const raw = toRaw(reactive);
 
       expect(raw).toEqual(original);
-      expect(raw).not.toBe(original); // Different reference
+      expect(raw).toBe(original); // Should be the same reference
     });
 
-    it('should handle nested objects', () => {
+    it('should return original object for non-reactive values', () => {
       const original = { user: { name: 'John' } };
       const raw = toRaw(original);
 
       expect(raw).toEqual(original);
-      expect(raw).not.toBe(original);
-      expect(raw.user).toBe(original.user); // Shallow copy
+      expect(raw).toBe(original); // Should be the same reference
     });
   });
 });
