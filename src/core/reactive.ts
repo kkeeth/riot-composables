@@ -143,8 +143,7 @@ export function isReactive(value: unknown): boolean {
   return (
     value !== null &&
     typeof value === 'object' &&
-    REACTIVE_MARKER in value &&
-    value[REACTIVE_MARKER] === true
+    REACTIVE_MARKER in value
   );
 }
 
